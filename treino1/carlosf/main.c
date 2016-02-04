@@ -21,6 +21,7 @@ int slot[1000][1000];
 int spaces[1000][1000];
 /* Pool: [0]->total, [1]->max capacity for a single row, [2]->row index max */
 int pool[1000];
+int rows[1000];
 
 void shuffleServers(){
 	int r0, r1, i, t;
@@ -52,8 +53,19 @@ void shufflePools(){
 		pool[r0] = pool[r1];
 		pool[r1] = t;
 	}
-}
 
+}
+void shuffleRows(){
+	int r0, r1, i, t;
+	for (i = 0; i < R/2; ++i){
+		r0 = rand() % R;
+		r1 = rand() % R;
+
+		t = rows[r0];
+		rows[r0] = rows[r1];
+		rows[r1] = t;
+	}
+}
 int cmp(int *a, int *b){
 	if (a[2] > b[2]) return 1;
 	if (a[2] < b[2]) return -1;
@@ -61,8 +73,9 @@ int cmp(int *a, int *b){
 }
 
 int main(void){
-	srand(time(NULL));
-	int i, a, b, j, c, s, k, l, flag, p;
+	/*srand(time(NULL));*/
+	srand(time(NULL)+clock());
+	int i, a, b, j, c, s, k, l, flag, p, w;
 
 	/* Read INPUT */
 	/* Read basic values */
@@ -128,10 +141,16 @@ int main(void){
 		printf("\n");
 	}*/
 
+	for (i = 0; i < R; ++i) {
+		rows[i] = i;
+	}
+
 	for (k = 0; k < nservers; ++k){
+		shuffleRows();
 		flag = 1;
 		s = server[k][0];
-		for (i = 0; i < R && flag; ++i)
+		for (w = 0; w < R && flag; ++w)
+			i = rows[w];
 			for (j = 0; j < S && flag; ++j){
 				if (spaces[i][j] >= s){
 					server[k][3] = i;
@@ -156,7 +175,7 @@ int main(void){
 	for (i = 0; i < P; ++i) {
 		pool[i] = i;
 	}
-
+	
 	qsort(server,nservers,sizeof(int[5]),(int(*)(const void*,const void*))cmp);
 
 	p = 0;
