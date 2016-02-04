@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <time.h>
 
 /* R: Number of rows (max 1000) */
 /* S: Number of slots per row (max 1000) */
@@ -53,8 +54,14 @@ void shufflePools(){
 	}
 }
 
+int cmp(int *a, int *b){
+	if (a[2] > b[2]) return 1;
+	if (a[2] < b[2]) return -1;
+	return 0;
+}
+
 int main(void){
-	srand(8);
+	srand(time(NULL));
 	int i, a, b, j, c, s, k, l, flag, p;
 
 	/* Read INPUT */
@@ -87,14 +94,19 @@ int main(void){
 	}*/
 
 	/*for (i = 0; i < nservers; ++i)
-		printf("(%d, %d)\t", server[i][0], server[i][1]);*/
+		printf("(%d, %d, %d)\t", server[i][2], server[i][0], server[i][1]);
 
-	/*shuffleServers();*/
-	/*printf("\n");
+	shuffleServers();
+	printf("\n");
+
+
 
 	for (i = 0; i < nservers; ++i)
-		printf("(%d, %d, %d)\t", server[i][2], server[i][0], server[i][1]);*/
+		printf("(%d, %d, %d)\t", server[i][2], server[i][0], server[i][1]);
 	
+	printf("\n");*/
+
+	shuffleServers();
 	for (i = 0; i < R; ++i){
 		c = 1;
 		for (j = S - 1; j >= 0; --j){
@@ -145,6 +157,7 @@ int main(void){
 		pool[i] = i;
 	}
 
+	qsort(server,nservers,sizeof(int[5]),(int(*)(const void*,const void*))cmp);
 
 	p = 0;
 	for (k = 0; k < nservers; ++k){
