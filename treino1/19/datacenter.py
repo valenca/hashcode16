@@ -7,12 +7,6 @@ import random
           - get row r with lowest sum of capacities so far on which s fits
           - assign r to smallest 'subrow' in r
           - assign a random pool to s
-
-    Note: each Row is defined by a list of contiguous SubRow's with no 
-          unavailable slots
-
-    As expected final score for "dc.in" has great amplitude and bad results
-    ~ between 40 and 140.
 """
 
 class Server:
