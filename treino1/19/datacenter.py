@@ -116,7 +116,7 @@ def load_servers():
         servers[i] = Server(i,s,c)
     return servers
 
-def get_best_assign(server):
+def get_best_assign(server, choose_pool_fn):
     """ returns assignment to row with least value where server fits """
     global grid, servers
     best_row    = None
@@ -132,19 +132,40 @@ def get_best_assign(server):
         slot = best_subrow.next_free_slot()
         best_subrow.assign(server)
         best_row.value += server.capacity
-        return Assignment(server, random.randint(0, P-1), best_row.id, slot)
+        return Assignment(server, choose_pool_fn(), best_row.id, slot)
     return Assignment(server, -1, -1, -1)
+
+def get_pool_uniform():
+    """ returns totally random pool id """
+    return random.randint(0, P-1)
+
+def get_pool_roulette(pool_capacities):
+    """ returns pool id based on roulette wheel selection """
+    assert(len(pool_capacities) > 0)
+
+    inv_pl_capacities = [1.0 / c for c in pool_capacities]
+    acum = inv_pl_capacities[0]
+    x = random.uniform(0, sum(inv_pl_capacities))
+    for pool_id in xrange(len(inv_pl_capacities)):
+        if x <= acum:
+            return pool_id
+        acum += inv_pl_capacities[pool_id+1]
+    assert(False)  # should never reach this point
 
 def solve():
     """ TODO: use ordered set to store rows """
     global grid, servers
     result = [Assignment(i,-1,-1,-1) for i in xrange(M)]
 
+    # assign an equal *positive* capacity for all pools
+    pool_capacities = [1] * P
     servers.sort(key = lambda s : (-s.ratio(), s.size)  )
     for s in servers:
-        result[s.id] = get_best_assign(s)
-        # print "server=", s
-        # print grid
+        # result[s.id] = get_best_assign(s, get_pool_uniform)
+        result[s.id] = get_best_assign(s, lambda : 
+                                            get_pool_roulette(pool_capacities))
+        pool_capacities[result[s.id].pool_id] += s.capacity
+
     return result
 
 def compute_score(assignments):
@@ -160,7 +181,6 @@ def compute_score(assignments):
 
 if __name__ == '__main__':
     R, S, U, P, M = [int(x) for x in raw_input().split()]
-
     grid    = load_grid()
     servers = load_servers()
     assignments = solve()
