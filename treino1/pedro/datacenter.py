@@ -1,127 +1,169 @@
-from heapq import *
+import random
 
-class Assignment:
-    # assignment of servers
-    def __init__(self, server_id, pool_id, row_id, slot):
-        self.server_id = server_id
-        self.pool_id   = pool_id
-        self.row_id    = row_id
-        self.slot      = slot
-    def __str__(self):
-        if self.row_id != -1:
-            return ("Server " + str(self.server_id) +
-                    " placed in row " + str(self.row_id) +
-                    " at slot " + str(self.slot) +
-                    " and assigned to pool " + str(self.pool_id))
-        return "Server " + str(self.server_id) + " x"
-    def __repr__(self):
-        return self.__str__()
+""" 
+    Naive greedy solution:
+       - order servers by decreasing ratio of capacity/size
+       - for each s in servers:
+          - get row r with lowest sum of capacities so far on which s fits
+          - assign r to smallest 'subrow' in r
+          - assign a random pool to s
+
+    Note: each Row is defined by a list of contiguous SubRow's with no 
+          unavailable slots
+
+    As expected final score for "dc.in" has great amplitude and bad results
+    ~ between 40 and 140.
+"""
 
 class Server:
     def __init__(self, id, size, capacity):
         self.id       = id
         self.size     = size
         self.capacity = capacity
-    def __str__(self):
-        return "server(" + str(self.size) + "," + str(self.capacity) + ")"
-    def __repr__(self):
-        return self.__str__()
+
     def ratio(self):
         return float(self.capacity) / self.size
 
-class Row:
-    def __init__(self, id, size, position, occupied_size, value):
-        self.id            = id
-        self.size          = size
-        self.occupied_size = occupied_size
-        self.value         = value
     def __str__(self):
-        return ("row(" + str(self.size) + "," + str(self.original_row) + ","  
-                + str(self.value) + ")")
+        return ("server(" + str(self.id) + ","
+                          + str(self.size) + "," + str(self.capacity) + ")")
     def __repr__(self):
         return self.__str__()
+
+class Row:
+    def __init__(self, id, subrows, value):
+        self.id            = id
+        self.subrows       = subrows
+        self.value         = value
+
+    def get_best_subrow(self, server):
+        """ returns subrow with least size for server 'server' """
+        best = None                 # best subrow
+        best_size = float('inf')    # size of best subrow
+        for sr in self.subrows:
+            if sr.size - sr.occupied_size >= server.size:
+                if best_size > sr.size - sr.occupied_size:
+                    best_size = sr.size - sr.occupied_size
+                    best = sr
+        return best
+
     def __cmp__(self, other):
-        return cmp(self.value, other.value)        
+        if other == None:
+            return 1
+        return cmp(self.value, other.value)
+    def __str__(self):
+        return str(self.subrows)
+    def __repr__(self):
+        return self.__str__()
 
+class SubRow:
+    def __init__(self, size, occupied_size, position):
+        self.size          = size
+        self.occupied_size = occupied_size
+        self.position      = position
 
-def solve_greedy(servers, rows):
-    # sort servers
-    q_servers = servers[:]
-    q_servers.sort(key = lambda s : -s.ratio())
+    def next_free_slot(self):
+        return self.position + self.occupied_size
 
-    # greedy assign
-    assignments = [Assignment(i,-1,-1,-1) for i in xrange(len(servers))]
+    def assign(self, server):
+        self.occupied_size += server.size
 
-    while q_servers != [] and rows != []:
-        s = q_servers.pop(0)
-        r = heappop(rows)
-        if r.size >= s.size:
-            heappush(rows, Row(r.id,
-                               r.size - s.size,
-                               r.position,
-                               r.occupied_size + s.size,
-                               r.value + s.capacity))
-            assignments[s.id] = Assignment(s.id, -1, r.id, r.occupied_size)
-        else:
-            heappush(rows, r)
-            # left.append(s)
+    def __str__(self):
+        return (("x" * self.occupied_size) +
+                ("-" * (self.size - self.occupied_size)))
+    def __repr__(self):
+        return self.__str__()
 
-    # left.extend(q_servers)
+class Assignment:    # assignment of servers
+    def __init__(self, server, pool_id, row_id, slot):
+        self.server  = server
+        self.pool_id = pool_id
+        self.row_id  = row_id
+        self.slot    = slot
 
-    # print "rows=", rows
-    # print "q_servers=", q_servers
-    # print "assignments=", assignments
-    return assignments
+    def is_valid(self):
+        return self.row_id != -1
 
+    def __str__(self):
+        if self.is_valid():
+            return (str(self.row_id) + " " +
+                    str(self.slot)   + " " +
+                    str(self.pool_id) )
+        return "x"
+    def __repr__(self):
+        return self.__str__()
 
-if __name__ == '__main__':
-    R, S, U, P, M = [int(x) for x in raw_input().split()]
-
-    # read xslots
-    xslots = ['-'*S for x in xrange(R)]
-    for i in xrange(U):
+def load_grid():
+    grid = [Row(i,[SubRow(S, 0, 0)],0) for i in xrange(R)]
+    for u in xrange(U):
         r, s = [int(x) for x in raw_input().split()]
-        xslots[r] = xslots[r][:s] + 'x' + xslots[r][s+1:]
+        for i in xrange(len(grid[r].subrows)):
+            old = grid[r].subrows[i]
+            if (old.position <= s and s <= old.position + old.size - 1):
+                new = []
+                if old.position < s:
+                    new.append( SubRow(s - old.position, 0, old.position))
+                if old.position + old.size - 1 > s:
+                    new.append( SubRow(old.position + old.size -1 -s, 0, s + 1))
+                grid[r].subrows = grid[r].subrows[:i]+new+ grid[r].subrows[i+1:]
+                break
+    return grid
 
-    # read servers
+def load_servers():
     servers = [Server(0,0,0) for _ in range(M)]
     for i in xrange(M):
         s, c  = [int(x) for x in raw_input().split()]
         servers[i] = Server(i,s,c)
+    return servers
 
-    # order servers
-    # servers.sort(key = lambda srv : -srv.ratio())
+def get_best_assign(server):
+    """ returns assignment to row with least value where server fits """
+    global grid, servers
+    best_row    = None
+    best_subrow = None
+    for r in grid:
+        sr = r.get_best_subrow(server)
+        if sr != None:
+            if (best_row == None) or (r.value < best_row.value):
+                best_row    = r
+                best_subrow = sr
 
-    # split rows into a heap ordered increasing by sum of capacities
-    rows = []
-    for i in xrange(len(xslots)):
-        print "xslots[i]=", xslots[i]
-        sizes     = [ len(_) for _ in xslots[i].split('x') if _ != '']
+    if best_row != None:
+        slot = best_subrow.next_free_slot()
+        best_subrow.assign(server)
+        best_row.value += server.capacity
+        return Assignment(server, random.randint(0, P-1), best_row.id, slot)
+    return Assignment(server, -1, -1, -1)
 
-        j = 0
-        while j < len(xslots[i]) and xslots[i][j] == 'x':
-            j+= 1
-        positions = []
-        while j < len(xslots[i]):
-            positions.append(j)
-            while j < len(xslots[i]) and xslots[i][j] != 'x':
-                j += 1
-            while j < len(xslots[i]) and xslots[i][j] == 'x':
-                j += 1
-        print positions
+def solve():
+    """ TODO: use ordered set to store rows """
+    global grid, servers
+    result = [Assignment(i,-1,-1,-1) for i in xrange(M)]
 
-        xpos = [j for j in range(len(xslots[i])) if xslots[i][j] == 'x']
-        s = 'x' + xslots[i]
-        to_remove
+    servers.sort(key = lambda s : -s.ratio())    
+    for s in servers:
+        result[s.id] = get_best_assign(s)
+        # print "server=", s
+        # print grid
+    return result
 
-        xpos = 
+def compute_score(assignments):
+    pool_capacities = [[0] * R for j in xrange(P)]
+    GC = [0] * P   # guaranteed capacities for all pools
+    for a in assignments:
+        if a.is_valid():
+            pool_capacities[a.pool_id][a.row_id] += a.server.capacity
+    for p in xrange(P):
+        total = sum(pool_capacities[p])
+        GC[p] = min( [total - x for x in pool_capacities[p] ] )
+    return min(GC)
 
-        print sizes
+if __name__ == '__main__':
+    R, S, U, P, M = [int(x) for x in raw_input().split()]
 
-    #     for row_size in :
-    #         rows.append( Row(i, row_size, 0, 0) )
-    # heapify(rows)
-
-    # print 'ASSIGNMENTS: '
-    # for assign in solve_greedy(servers, rows):
-    #     print assign
+    grid    = load_grid()
+    servers = load_servers()
+    assignments = solve()
+    for a in assignments:
+        print a
+    print "score=", compute_score(assignments)
