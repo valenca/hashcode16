@@ -140,7 +140,7 @@ def solve():
     global grid, servers
     result = [Assignment(i,-1,-1,-1) for i in xrange(M)]
 
-    servers.sort(key = lambda s : -s.ratio())    
+    servers.sort(key = lambda s : (-s.ratio(), s.size)  )
     for s in servers:
         result[s.id] = get_best_assign(s)
         # print "server=", s
