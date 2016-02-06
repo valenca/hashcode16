@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import random
+import numpy as np
 
 """ 
     Naive greedy solution:
@@ -173,6 +175,30 @@ def compute_score(assignments):
         GC[p] = min( [total - x for x in pool_capacities[p] ] )
     return min(GC)
 
+def print_stats(assignments):
+    pool_capacities = [[0] * R for j in xrange(P)]
+    row_capacities  = [0] * R
+
+    num_servers = 0
+    for a in assignments:
+        if a.is_valid():
+            num_servers += 1
+            row_capacities[a.row_id] += a.server.capacity
+            pool_capacities[a.pool_id][a.row_id] += a.server.capacity
+
+    print 'STATISTICS:'
+    print '% assigned servers=', float(num_servers) / M * 100
+    print u'Stand. deviation rows ∑capacities=',  np.std(row_capacities)
+    print u'Maximum row ∑capacities=', max(row_capacities)
+    print u'Minimum row ∑capacities=', min(row_capacities)
+    print u'Stand. deviation pools ∑capacities=', np.std(
+                                            [sum(x) for x in pool_capacities])
+    pl_worse_cap_frac = [ max([float(c) / sum(pc) * 100 for c in pc ])
+                                for pc in pool_capacities ]
+    print u'Average worse %pool_row_cap/pool_total_cap=', np.average(
+                                                pl_worse_cap_frac), '%'
+
+
 if __name__ == '__main__':
     R, S, U, P, M = [int(x) for x in raw_input().split()]
     grid    = load_grid()
@@ -180,4 +206,6 @@ if __name__ == '__main__':
     assignments = solve()
     for a in assignments:
         print a
-    print "score=", compute_score(assignments)
+
+    print '\nSCORE=', compute_score(assignments), '\n'
+    print_stats(assignments)
