@@ -80,6 +80,9 @@ class Assignment:    # assignment of servers
     def is_valid(self):
         return self.row_id != -1
 
+    def set_pool_id(self, pid):
+        self.pool_id = pid
+
     def __str__(self):
         if self.is_valid():
             return (str(self.row_id) + " " +
@@ -148,19 +151,58 @@ def get_pool_roulette(pool_capacities):
         acum += inv_pl_capacities[pool_id+1]
     assert(False)  # should never reach this point
 
+def get_pool_cycle(srv_counter):
+    """ cycles over all pools in the same order """
+    return srv_counter % P
+
+def get_pool_mincap(pool_capacities):
+    """ returns pool with minmum capacity """
+    return min(zip(pool_capacities, range(len(pool_capacities))))[1]
+
+def get_pool_none():
+    return -1
+
 def solve():
     """ TODO: use ordered set to store rows """
     global grid, servers
     result = [Assignment(i,-1,-1,-1) for i in xrange(M)]
 
     # assign an equal *positive* capacity for all pools
-    pool_capacities = [1] * P
+    # pool_capacities = [1] * P
+    # pool_capacities = [0] * P
+    # counter = 0
     servers.sort(key = lambda s : (-s.ratio(), s.size)  )
     for s in servers:
+        ### get random pool ###
         # result[s.id] = get_best_assign(s, get_pool_uniform)
-        result[s.id] = get_best_assign(s, lambda : 
-                                            get_pool_roulette(pool_capacities))
-        pool_capacities[result[s.id].pool_id] += s.capacity
+
+        ### get random pool based on roulette wheel selection ###
+        # result[s.id] = get_best_assign(s, lambda : 
+        #                                     get_pool_roulette(pool_capacities))
+        # pool_capacities[result[s.id].pool_id] += s.capacity
+        
+        ### cycle over all pools ###
+        # result[s.id] = get_best_assign(s, lambda: get_pool_cycle(counter))
+        # counter += 1
+        
+        ### return pool with least capacity every time ###
+        # result[s.id] = get_best_assign(s, lambda: get_pool_mincap(pool_capacities))
+        # pool_capacities[result[s.id].pool_id] += s.capacity
+
+        ### assign pools when all servers all assigned ###
+        result[s.id] = get_best_assign(s, get_pool_none)
+
+    ### assign pools when all servers are assigned ###
+    pool_capacities = [0] * P
+    servers_by_row = [[] for i in xrange(R)]
+    for assign in result:
+        servers_by_row[assign.row_id].append( assign.server )
+    for r in xrange(R):
+        for s in servers_by_row[r]:
+            pid = get_pool_mincap(pool_capacities)
+            result[s.id].set_pool_id( pid ) 
+            pool_capacities[pid] += s.capacity
+
 
     return result
 
@@ -189,8 +231,8 @@ def print_stats(assignments):
     print 'STATISTICS:'
     print '% assigned servers=', float(num_servers) / M * 100
     print u'Stand. deviation rows ∑capacities=',  np.std(row_capacities)
-    print u'Maximum row ∑capacities=', max(row_capacities)
-    print u'Minimum row ∑capacities=', min(row_capacities)
+    # print u'Maximum row ∑capacities=', max(row_capacities)
+    # print u'Minimum row ∑capacities=', min(row_capacities)
     print u'Stand. deviation pools ∑capacities=', np.std(
                                             [sum(x) for x in pool_capacities])
     pl_worse_cap_frac = [ max([float(c) / sum(pc) * 100 for c in pc ])
