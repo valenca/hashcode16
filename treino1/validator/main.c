@@ -61,6 +61,9 @@ int main(void){
     for(j=0;j<server[i][0];++j){
       r = result[i][0];
       s = result[i][1]+j;
+      if(r==-1){
+        continue;
+      }
       if(slot[r][s]!=0){
         if(slot[r][s]==-1){
           printf("Unavailable slot:\nRow: %d\nSlot: %d\nServer: %d\n",r,s,i);
