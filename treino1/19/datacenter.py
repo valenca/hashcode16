@@ -198,6 +198,7 @@ def solve():
     for assign in result:
         servers_by_row[assign.row_id].append( assign.server )
     for r in xrange(R):
+        servers_by_row[r].sort(key = lambda s: -s.capacity )
         for s in servers_by_row[r]:
             pid = get_pool_mincap(pool_capacities)
             result[s.id].set_pool_id( pid ) 
