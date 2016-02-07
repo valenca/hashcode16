@@ -8,7 +8,9 @@ import numpy as np
        - for each s in servers:
           - get row r with lowest sum of capacities so far on which s fits
           - assign r to smallest 'subrow' in r
-          - assign a random pool to s
+       - for every row r:
+          - for every server s assigned to r (by decreasing order of s.capacity)
+             - assign s to pool with least capacity so far
 """
 
 class Server:
@@ -197,6 +199,8 @@ def solve():
     servers_by_row = [[] for i in xrange(R)]
     for assign in result:
         servers_by_row[assign.row_id].append( assign.server )
+
+    # assign pools by row by decreasing order of servers capacity
     for r in xrange(R):
         servers_by_row[r].sort(key = lambda s: -s.capacity )
         for s in servers_by_row[r]:
