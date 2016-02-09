@@ -7,7 +7,8 @@ def print_wind(wind_grid):
         print ''
 
 def print_wind_dir(wind_grid):
-    norm = lambda (x,y): (x/abs(x) if x!=0 else 0, y/abs(y) if y!=0 else 0)
+    norm = lambda p: (p.x/abs(p.x) if p.x!=0 else 0,
+                      p.y/abs(p.y) if p.y!=0 else 0)
     d = { (0,1):'→', (0,-1):'←', (1,0):'↓', (-1,0):'↑', 
           (1,1):'↘', (-1,-1):'↖', (-1,1):'↗', (1,-1):'↙'}
 
@@ -20,6 +21,15 @@ def print_wind_dir(wind_grid):
 def print_targets(R, C, targets):
     res = [list('-'*C) for _ in xrange(R)]
     for t in targets:
-        res[t[0]][t[1]] = 'X'
+        res[t.x][t.y] = 'X'
+    for line in res:
+        print "".join(line)
+
+def print_clusters(R, C, targets, clusters):
+    res = [list('-'*C) for _ in xrange(R)]
+    for t in targets:
+        res[t.x][t.y] = 'X'
+    for c in clusters:
+        res[c.x][c.y] = '⬤'
     for line in res:
         print "".join(line)
