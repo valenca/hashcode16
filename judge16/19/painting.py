@@ -1,3 +1,5 @@
+import greedy
+
 class Slot:
     def __init__(self, x, y, painted=False):
         self.x = x
@@ -59,11 +61,18 @@ def read_input():
     g.to_paint.sort(key = lambda s: s.x)
     return g
 
-
+def solve(g):
+    size = 20
+    clusters = g.line_sweep(size)
+    for c in clusters:
+        arr = [[] for n in clusters[c]]
+        s = clusters[x]
+        greedy.greedy(2*size+1, clusters[c], )
 
 if __name__ == '__main__':
     g = read_input()
 
-    clusters = g.line_sweep(100)
-    for c in clusters:
-        print c, "neigh=", clusters[c]
+
+    # clusters = g.line_sweep(100)
+    # for c in clusters:
+    #     print c, "neigh=", clusters[c]
