@@ -1,19 +1,16 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 from operator import attrgetter
 from itertools import cycle
-#from __future__ import print_function
+import numpy as np
+import sys
 
 class Pool:
     def __init__(self,index):
         self.index = index
-        self.total_capacity = 0
-        self.max_capacity = 0
         self.servers = []
         self.current_server = -1
-
-    def score(self):
-        return self.total_capacity - self.max_capacity
+        self.total_capacity = 0
 
     def add_server(self, server):
         self.servers.append(server)
@@ -42,6 +39,10 @@ class Server:
 
     def __repr__(self):
         return self.__str__()+"\n"
+
+    @property
+    def ratio(self):
+        return self.capacity/self.size
 
 class Slot:
     def __init__(self,index,unavailable=False,server=None):
@@ -83,11 +84,13 @@ class Grid:
             sr = sr + str(r) + "\n"
         return sr
 
-if __name__ == "__main__":
-    R,S,U,P,M=list(map(int,input().split()))
-
-    global grid 
+def create_data():
+    global R, S, U, P, M
+    global grid
     global servers
+    global pools
+
+    R,S,U,P,M=list(map(int,input().split()))
 
     grid = Grid(R,S)
     servers = []
@@ -101,16 +104,29 @@ if __name__ == "__main__":
         s,c = list(map(int,input().split()))
         servers.append(Server(i,s,c))
 
-    servers_by_ratio    = sorted(servers, key=lambda server: server.capacity/server.size)
-    servers_by_size     = sorted(servers, key=lambda server: server.size)
-    servers_by_capacity = sorted(servers, key=lambda server: server.capacity)
+def sort_servers():
+    global servers
+    servers.sort(reverse=True, key=lambda server: server.ratio)
+    #servers.sort(reverse=True, key=lambda server: server.capacity)
 
-    for s in servers_by_capacity:
+def servers_to_pools():
+    global servers
+    global pools
+    
+    for s in servers:
         pools.sort(key=attrgetter("total_capacity"))
         pools[0].add_server(s)
         s.pool = pools[0]
         pools[0].total_capacity += s.capacity
 
+def print_output():
+    for s in sorted(servers, key=lambda server:server.index):
+        if s.row == -1:
+            print("x")
+        else:
+            print("%d %d %d" % (s.row, s.slot, s.pool.index))
+
+def servers_to_slots():
     p = 0
     c = 0
     while True:
@@ -142,21 +158,26 @@ if __name__ == "__main__":
         if p == len(pools):
             c = 0
             p = 0
-    
-    """pi = [[0]*P for _ in range(R)]
-    for s in servers:
-        if s.row != -1:
-            pi[s.row][s.pool.index] += s.capacity
 
-    for r in pi:
-        print(r)
-        print()
-        print()
-    """
-            
-    for s in servers:
-        if s.row == -1:
-            print("x")
-        else:
-            print("%d %d %d" % (s.row, s.slot, s.pool.index))
+
+if __name__ == "__main__":
+    global R, S, U, P, M
+    global grid
+    global servers
+    global pools
+
+    create_data()
+
+    sort_servers()
+
+    servers_to_pools()
+    for p in pools:
+        print(p.total_capacity, file=sys.stderr)
+        for s in p.servers:
+            print("%d/%d" % (s.size, s.capacity), end=" ", file=sys.stderr)
+        print(file=sys.stderr)
+
+    servers_to_slots()
     
+    print_output()
+
