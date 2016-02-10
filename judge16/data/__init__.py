@@ -4,6 +4,7 @@ class Slot:
         self.y = y
         self.paint = paint
         self.painted = False
+        self.neigh = None
 
 class Grid:
     def __init__(self, n_rows, n_collumns):
@@ -22,6 +23,12 @@ class Grid:
                     s = s + "."
             print(s)
 
+class Cluster:
+    def __init__(self, center, size):
+        self.center = center
+        self.size = size
+        self.grid = Grid(size, size)
+
 def read_input():
     N, M = list(map(int, raw_input().split()))
     g = Grid(N, M)
@@ -34,6 +41,7 @@ def read_input():
                 g.paint.append(g.grid[x][y])
 
     return g
+
 
 if __name__ == '__main__':
     g = read_input()
