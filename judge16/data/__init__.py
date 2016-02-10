@@ -9,6 +9,7 @@ class Grid:
         self.n_rows = n_rows
         self.n_collumns = n_collumns
         self.grid = [[Slot(x,y) for y in range(n_collumns)] for x in range(n_rows)]
+        self.painted = []
 
     def print_grid(self):
         for line in self.grid:
@@ -29,9 +30,13 @@ def read_input():
         for y in range(len(line)):
             if line[y]=="#":
                 g.grid[x][y].painted = True
+                g.painted.append(g.grid[x][y])
 
     return g
 
 if __name__ == '__main__':
     g = read_input()
+    for s in g.painted:
+        print("%d %d" % (s.x, s.y))
+    print(g.painted)
     g.print_grid()
