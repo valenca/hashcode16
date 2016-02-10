@@ -119,5 +119,5 @@ if __name__ == '__main__':
     print_clusters(c)
     print(len(c))
     
-    #g.print_grid(c)
+    g.print_grid(c)
 
