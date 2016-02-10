@@ -115,7 +115,7 @@ if __name__ == '__main__':
     #    print("%d %d" % (s.x, s.y))
     #print(g.paint)
   
-    c = make_clusters(g, 1)
+    c = make_clusters(g, 100)
     print_clusters(c)
     
     g.print_grid(c)
