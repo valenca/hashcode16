@@ -30,8 +30,8 @@ def read_input():
             if line[y]=="#":
                 g.grid[x][y].painted = True
 
-    g.print_grid()
     return g
 
 if __name__ == '__main__':
-    read_input()
+    g = read_input()
+    g.print_grid()
