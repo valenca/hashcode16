@@ -37,13 +37,9 @@ class Grid:
         for i, slot in enumerate(self.to_paint):
             neigh[slot] = filter(lambda  s: s.painted ,
                                  self.neighbours(slot, size))
-
-            # print "slot=", slot, "neigh=", neigh[slot]"
-
         res = {}
         while neigh != {}:
             next      = max(neigh, key = lambda x: len(neigh[x]))
-            # print "next=", next, "n_neigh=", neigh[next]
             to_remove = neigh.pop(next)
             res[next] = to_remove
             for n in to_remove:
