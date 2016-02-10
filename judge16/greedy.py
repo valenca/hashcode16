@@ -129,6 +129,7 @@ def greedy(s, v, offset_x, offset_y):
             print("PAINT_SQUARE %d %d %d" % (s/2 + offset_x, s/2 + offset_y, s/2))
             for i in range(s):
                     for j in range(s):
+						if m[i][j] == 0:
                             print("ERASE_CELL %d %d" % (i + offset_x, j + offset_y))
     elif fit[0][1] == 1:
             for i in range(s):
