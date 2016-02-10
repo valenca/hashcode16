@@ -4,7 +4,8 @@ class Slot:
         self.y = y
         self.paint = paint
         self.painted = False
-        self.neigh = []
+        self.neigh = set()
+        self.neigh_count = 0
 
     def __str__(self):
         return "%d %d" % (self.x, self.y)
@@ -67,35 +68,37 @@ def make_clusters(g, d):
 
     # Get neighbors to all points
     for i in xrange(len(g.paint)):
-        g.paint[i].neigh.append(g.paint[i])
+        g.paint[i].neigh.add(g.paint[i])
+        g.paint[i].neigh_count += 1
         for j in xrange(i+1, len(g.paint)):
             if g.paint[j].x - g.paint[i].x > d:
                 break
             elif abs(g.paint[j].y - g.paint[i].y) > d:
                 continue
             else:
-                g.paint[i].neigh.append(g.paint[j])
-                g.paint[j].neigh.append(g.paint[i])
+                g.paint[i].neigh.add(g.paint[j])
+                g.paint[j].neigh.add(g.paint[i])
 
     # Check neigh count
     sorted_points = sorted(g.paint, reverse=True, key=lambda p:len(p.neigh))
+    p = max(sorted_points, key=lambda p:len(p.neigh))
 
     # Build clusters
-    for p in sorted_points:
+    while True:
         if len(p.neigh) > 0:
             c = Cluster(p, d)
             clusters.append(c)
-            for s in p.neigh[::]:
+            for s in list(p.neigh):
                 c.add_point(s)
                 if s == p:
                     continue
-                for sp in s.neigh[::]:
+                for sp in list(s.neigh):
                     if sp == s:
                         continue
                     sp.neigh.remove(s)
-                s.neigh = []
-            p.neigh = []
-            sorted_points.sort(reverse=True, key=lambda p:len(p.neigh))
+                s.neigh = set()
+            p.neigh = set()
+            p = max(sorted_points, key=lambda p:len(p.neigh))
         else:
             break
 
@@ -105,8 +108,6 @@ def make_clusters(g, d):
 def print_clusters(clusters):
     for c in clusters:
         print(c)
-        #for p in c.grid.paint:
-        #    print(p)
 
 if __name__ == '__main__':
     g = read_input()
