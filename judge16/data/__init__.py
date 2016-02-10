@@ -117,6 +117,7 @@ if __name__ == '__main__':
   
     c = make_clusters(g, 100)
     print_clusters(c)
+    print(len(c))
     
     g.print_grid(c)
 
