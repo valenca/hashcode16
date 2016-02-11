@@ -62,7 +62,7 @@ def read_input():
         for j in map(int,raw_input().split()):
             orders[-1].add_product(prods[j])
 
-    drones = [Drone(warehouses[0].x, warehouses[0].y) for _ in range(D)]
+    drones = [Drone(warehouses[0].x, warehouses[0].y, PL) for _ in range(D)]
 
     return T, prods, warehouses, orders, drones
 
