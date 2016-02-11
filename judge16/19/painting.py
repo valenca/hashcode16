@@ -1,4 +1,5 @@
 import greedy
+import sys
 
 class Slot:
     def __init__(self, x, y, painted=False):
@@ -62,16 +63,17 @@ def read_input():
     return g
 
 def solve(g):
-    size = 20
+    size = int(sys.argv[1])
     clusters = g.line_sweep(size)
     for c in clusters:
-        arr = [[] for n in clusters[c]]
-        s = clusters[x]
-        greedy.greedy(2*size+1, clusters[c], )
+        minx = min(s.x for s in clusters[c])
+        miny = min(s.y for s in clusters[c])
+        arr = [[n.x-minx, n.y-miny] for n in clusters[c]]
+        greedy.greedy(2*size+1, arr, minx, miny)
 
 if __name__ == '__main__':
     g = read_input()
-
+    solve(g)
 
     # clusters = g.line_sweep(100)
     # for c in clusters:
