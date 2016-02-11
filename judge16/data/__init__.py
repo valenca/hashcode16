@@ -67,20 +67,30 @@ def make_clusters(g, d):
     clusters = []
 
     # Get neighbors to all points
-    for i in xrange(len(g.paint)):
-        g.paint[i].neigh.add(g.paint[i])
-        g.paint[i].neigh_count += 1
-        for j in xrange(i+1, len(g.paint)):
-            if g.paint[j].x - g.paint[i].x > d:
-                break
-            elif abs(g.paint[j].y - g.paint[i].y) > d:
-                continue
-            else:
-                g.paint[i].neigh.add(g.paint[j])
-                g.paint[j].neigh.add(g.paint[i])
+    for i in xrange(len(g.grid)):
+        for m in xrange(len(g.grid[i])):
+            if g.grid[i][m].paint == True:
+                g.grid[i][m].neigh.add(g.grid[i][m])
+            for j in xrange(len(g.paint)):
+                if g.paint[j].x < g.grid[i][m].x:
+                    continue
+                elif g.paint[j].x == g.grid[i][m].x and g.paint[j].y < g.grid[i][m].y:
+                    continue
+                elif g.paint[j].x - g.grid[i][m].x > d:
+                    break
+                elif abs(g.paint[j].y - g.grid[i][m].y) > d:
+                    continue
+                else:
+                    g.grid[i][m].neigh.add(g.paint[j])
+                    if g.grid[i][m].paint == True:
+                        g.paint[j].neigh.add(g.grid[i][m])
 
+    sorted_points = []
+    for i in xrange(len(g.grid)):
+        for m in xrange(len(g.grid[i])):
+            sorted_points.append(g.grid[i][m])
     # Check neigh count
-    sorted_points = sorted(g.paint, reverse=True, key=lambda p:len(p.neigh))
+    #sorted_points.sort sorted(g.grid, reverse=True, key=lambda p:len(p.neigh))
     p = max(sorted_points, key=lambda p:len(p.neigh))
 
     # Build clusters
@@ -88,14 +98,20 @@ def make_clusters(g, d):
         if len(p.neigh) > 0:
             c = Cluster(p, d)
             clusters.append(c)
+            for s in list(sorted_points):
+                if s == p:
+                    continue
+                if p in s.neigh:
+                    s.neigh.remove(p)
             for s in list(p.neigh):
                 c.add_point(s)
                 if s == p:
                     continue
-                for sp in list(s.neigh):
-                    if sp == s:
+                for sp in list(sorted_points):
+                    if sp == s or sp == p:
                         continue
-                    sp.neigh.remove(s)
+                    if s in sp.neigh:
+                        sp.neigh.remove(s)
                 s.neigh = set()
             p.neigh = set()
             p = max(sorted_points, key=lambda p:len(p.neigh))
@@ -115,9 +131,9 @@ if __name__ == '__main__':
     #    print("%d %d" % (s.x, s.y))
     #print(g.paint)
   
-    c = make_clusters(g, 1)
+    c = make_clusters(g, 2)
     print_clusters(c)
     print(len(c))
     
-    g.print_grid(c)
+    #g.print_grid(c)
 
