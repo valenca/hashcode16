@@ -1,7 +1,13 @@
 #!/usr/bin/python2
 
+import math
+
+def distance(x1,y1,x2,y2):
+    return math.ceil( (abs(x1-x2) + abs(y1-y2))**0.5 )
+
 class Drone:
-    def __init__(self, x, y, PL):
+    def __init__(self, index, x, y, PL):
+        self.index = index
         self.x = x
         self.y = y
         self.max_weight = PL
@@ -13,9 +19,27 @@ class Drone:
         except KeyError:
             self.items[prod] = size
 
+    def nextAction(self, orders):
+        assert(orders != [])
+
+        next_order = orders[0]
+        best_dist  = dist(next_order.x, next_order.y, self.x, self.y)
+        for o in orders[1:]:
+            d = dist(o.x, o.y, self.x, self.y)
+            if d < best_dist:
+                best_dist = d
+                next_order = o
+
+        
+
+
+        print len(orders)
+        return 1000000
+
 
 class Warehouse:
-    def __init__(self, x, y, items):
+    def __init__(self, index, x, y, items):
+        self.index = index
         self.x = x
         self.y = y
         self.items = items
@@ -48,10 +72,12 @@ def read_input():
     
     W = input()
     warehouses = []
+    i = 0
     for _ in range(W):
         x,y = map(int,raw_input().split())
         items = map(int,raw_input().split())
-        warehouses.append(Warehouse(x,y,items))
+        warehouses.append(Warehouse(i,x,y,items))
+        i += 1
 
     C = input()
     orders = []
@@ -62,7 +88,7 @@ def read_input():
         for j in map(int,raw_input().split()):
             orders[-1].add_product(prods[j])
 
-    drones = [Drone(warehouses[0].x, warehouses[0].y, PL) for _ in range(D)]
+    drones = [Drone(i, warehouses[0].x, warehouses[0].y, PL) for i in range(D)]
 
     return T, prods, warehouses, orders, drones
 

@@ -40,16 +40,20 @@ class Event:
 
 if __name__ == '__main__':
 	q=Timeline()
-	d = Drone(0,0,100)
-	q.addEvent(Event(d,0,"load"))
-	q.addEvent(Event(d,0,"load"))
-	q.addEvent(Event(d,0,"load"))
+	d = Drone(0,0,0,100)
+
 
 	q.addEvent(Event(d,1,"load"))
+	q.addEvent(Event(d,0,"load"))
+	q.addEvent(Event(d,0,"load"))
+	q.addEvent(Event(d,2,"load"))
+	q.addEvent(Event(d,2,"load"))
+	q.addEvent(Event(d,0,"load"))
 	q.addEvent(Event(d,1,"load"))
 
-	q.addEvent(Event(d,2,"load"))
-	q.addEvent(Event(d,2,"load"))
+
+
+
 
 	while not q.isEmpty():
 		print q.nextEvents()
