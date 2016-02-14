@@ -59,11 +59,20 @@ class Drone:
 
         cur_weight = 0
         to_carry = [0] * len(needed_items)
-        while cur_weight < self.max_weight:
-            ind, wgt, qnt = min(filter(lambda (a,b,c): c!=0, [(p.index, p.weight, might_carry[p.index]) for p in prods]))
-            cur_weight += wgt
-            might_carry[ind] -= 1
-            to_carry[ind] += 1
+        ps = sorted([[p.weight, p.index, might_carry[p.index]] for p in prods if might_carry[p.index] > 0])
+        i = 0
+        while i < len(ps) and cur_weight + ps[i][0] < self.max_weight:
+            cur_weight += ps[i][0]
+            ps[i][2] -= 1
+            to_carry[ps[i][1]] += 1
+            if ps[i][2] == 0:
+                i += 1
+
+
+            # ind, wgt, qnt = min(filter(lambda (a,b,c): c!=0, ))
+            # cur_weight += wgt
+            # might_carry[ind] -= 1
+            # to_carry[ind] += 1
 
 
         # print "cur_weight=", cur_weight
@@ -158,7 +167,7 @@ class Product:
     def __repr__(self):
         return self.__str__()
 
-	
+    
 def read_input():
     n_rows,n_cols,D,T,PL = map(int,raw_input().split())
     

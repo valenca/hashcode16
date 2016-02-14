@@ -2,6 +2,7 @@ from timeline import *
 from data import *
 
 if __name__ == '__main__':
+    outfile = open("out", "w")
     T, prods, warehouses, orders, drones = read_input()
     q = Timeline()
     for d in drones:
