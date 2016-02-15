@@ -62,6 +62,15 @@ class Order(Inventory):
     def __cmp__(self, other):
         return cmp(self.totalWeight(), other.totalWeight())
 
+class SuperOrder:
+    def __init__(self, x, y, orders):
+        self.x      = x
+        self.y      = y
+        self.orders = orders
+
+    def deliver(self, items):
+        pass
+
 class Drone:
     def __init__(self, index, x, y, w_max):
         self.index  = index

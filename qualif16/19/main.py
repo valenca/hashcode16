@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys
 from data import *
 from heapq import * 
@@ -23,9 +25,9 @@ def read_input():
         warehouses.append(Warehouse(i, x, y, items))
 
     ## orders
-    C = input()
+    O = input()
     orders = []
-    for i in range(C):
+    for i in range(O):
         x, y   = read_ints()
         nitems = input()
         items = {}
@@ -36,7 +38,7 @@ def read_input():
     ## drones
     drones = [Drone(i,warehouses[0].x, warehouses[0].y, WMAX) for i in range(D)]
 
-    return item_types, warehouses, orders, drones, WMAX, T
+    return item_types, warehouses, orders, drones, WMAX, T, R, C
 
 
 def get_best_task(order, warehouses, drones):
@@ -54,6 +56,33 @@ def get_best_task(order, warehouses, drones):
                         best_dist = tmp_dist
     return (best_d, best_w, best_it)
 
+def get_superorders(orders, range):
+    neighbours = {}
+    orders.sort(key = lambda o: (o.x, o.y))
+    for o in orders:
+        neighbours[o] = [n for n in orders 
+                            if n != o and distance(o.x,o.y, n.x,n.y) <= range]
+    res = []
+    while neighbours != {}:
+        so = max(neighbours, key = lambda n: len(neighbours[n]))
+        neigh = neighbours.pop(so)
+        for n in neigh:
+            neighbours.pop(n, None)
+        res.append(SuperOrder(so.x, so.y, neigh))
+    return res
+
+def print_map(orders, superorders, warehouses, R, C, output):
+    grid = [['-'] * C for r in range(R)]
+    for o in orders:
+        grid[o.x][o.y] = 'o'
+    for so in superorders:
+        grid[so.x][so.y] = '⬤'
+    for w in warehouses:
+        grid[w.x][w.y] = '🏭'
+    print >> output, '\n'.join( [''.join(line) for line in grid] )
+    output.close()
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         outfile = open(sys.argv[1], "w")
@@ -61,7 +90,7 @@ if __name__ == '__main__':
         outfile = sys.stdout
 
 
-    item_types, warehouses, orders, drones, WMAX, T = read_input()
+    item_types, warehouses, orders, drones, WMAX, T, R, C = read_input()
     # print "item_types=",item_types
     # print "warehouses=",warehouses
     # print "orders=",orders
@@ -71,21 +100,27 @@ if __name__ == '__main__':
     available = {it: sum([w[it] for w in warehouses]) for it in item_types}
     orders.sort(key = lambda o: o.totalWeight())
 
-    ## remove impossible orders
-    to_do = []
+    ## get doable orders
+    todo = []
     for o in orders:
         if any([it.weight > WMAX for it in o.items]):
             continue
         if all([o[it] <= available[it] for it in o.items]):
             for it in o.items:
                 available[it] -= o[it]
-            to_do.append(o)
+            todo.append(o)
 
+    ## aggregate orders into superorders
+    # super_todo = get_superorders(orders[:], 10)
+    # print_map(orders, super_todo, warehouses, R, C, open("map.txt","w"))
+    # sys.exit(0)
+
+    finish    = {o: float('-inf') for o in todo}
     actions   = []
-    simulator = []
-    heapify(to_do)
-    while to_do != []:
-        o          = heappop(to_do)
+    # todo = super_todo       # comment to avoid superorders strategy
+    heapify(todo)
+    while todo != []:
+        o          = heappop(todo)
         d, w, item = get_best_task(o, warehouses, drones)
         quant      =  min(o[item], w[item], d.w_max / item.weight)
 
@@ -93,34 +128,30 @@ if __name__ == '__main__':
         actions.append(d.load(w, item, quant))
 
         # load extra items that fit
-        extra = {item: quant}
+        to_carry = {item: quant}
         while d.weight < d.w_max:
             last_w = d.weight
             for it in o.items:
-                if o[it] - extra.get(it,0) > 0 and w[it] > 0 and d.weight + it.weight <= d.w_max:
-                    extra[it] = extra.get(it, 0) + 1
-                    actions.append( d.load(w, it, 1) )
+                if o[it] - to_carry.get(it,0) > 0 and w[it] > 0:
+                    if d.weight + it.weight <= d.w_max:
+                        to_carry[it] = to_carry.get(it, 0) + 1
+                        actions.append( d.load(w, it, 1) )
             if last_w == d.weight:
                 break
 
-        # print "extra=",extra
-
-        # travel to order and deliver
-        # actions.append(d.deliver(o, item, quant))
-
         # deliver all items
-        for it in extra:
-            actions.append(d.deliver(o, it, extra[it]))
-        
+        for it in to_carry:
+            actions.append(d.deliver(o, it, to_carry[it]))
 
         if not o.isDone():
-            heappush(to_do, o)
-        else:
-            simulator.append(d.time)
+            heappush(todo, o)
+
+        # get finish time of all orders
+        finish[o] = max(finish[o], d.time)
     
     print >> outfile, len(actions)
     for a in actions:
         print >> outfile, a
 
-    score = int(sum([ ceil(float(T-t)/T * 100) for t in simulator]))
+    score = int(sum([ ceil(float(T-t)/T * 100) for t in finish.values()]))
     print "SCORE=", score
