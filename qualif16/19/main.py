@@ -40,22 +40,6 @@ def read_input():
 
     return item_types, warehouses, orders, drones, WMAX, T, R, C
 
-
-def get_best_task(order, warehouses, drones):
-    for it in order.items:
-        for w in warehouses:
-            if w[it] > 0:
-                ow_dist   = distance(w.x,w.y, order.x,order.y)
-                best_dist = float('inf')
-                for d in drones:
-                    tmp_dist = d.time + distance(d.x,d.y, w.x,w.y) + ow_dist
-                    if tmp_dist < best_dist:
-                        best_d    = d
-                        best_w    = w
-                        best_it   = it
-                        best_dist = tmp_dist
-    return (best_d, best_w, best_it)
-
 def get_superorders(orders, range):
     neighbours = {}
     orders.sort(key = lambda o: (o.x, o.y))
@@ -68,7 +52,7 @@ def get_superorders(orders, range):
         neigh = neighbours.pop(so)
         for n in neigh:
             neighbours.pop(n, None)
-        res.append(SuperOrder(so.x, so.y, neigh))
+        res.append(SuperOrder(so.x, so.y, [so]+neigh))
     return res
 
 def print_map(orders, superorders, warehouses, R, C, output):
@@ -111,7 +95,7 @@ if __name__ == '__main__':
             todo.append(o)
 
     ## aggregate orders into superorders
-    # super_todo = get_superorders(orders[:], 10)
+    # super_todo = get_superorders(orders[:], 3)
     # print_map(orders, super_todo, warehouses, R, C, open("map.txt","w"))
     # sys.exit(0)
 
@@ -120,9 +104,9 @@ if __name__ == '__main__':
     # todo = super_todo       # comment to avoid superorders strategy
     heapify(todo)
     while todo != []:
-        o          = heappop(todo)
-        d, w, item = get_best_task(o, warehouses, drones)
-        quant      =  min(o[item], w[item], d.w_max / item.weight)
+        o             = heappop(todo)
+        d, w, item, _ = o.getEarliestDeliver(warehouses, drones)
+        quant         = min(o[item], w[item], d.w_max / item.weight)
 
         # travel to warehouse and load required item
         actions.append(d.load(w, item, quant))
@@ -132,6 +116,7 @@ if __name__ == '__main__':
         while d.weight < d.w_max:
             last_w = d.weight
             for it in o.items:
+            # for it in sorted(o.items, key=lambda i: i.weight):
                 if o[it] - to_carry.get(it,0) > 0 and w[it] > 0:
                     if d.weight + it.weight <= d.w_max:
                         to_carry[it] = to_carry.get(it, 0) + 1

@@ -54,7 +54,7 @@ class Order(Inventory):
             self.items.pop(item)
 
     def totalWeight(self):
-        return sum([item.weight * quant for (item, quant) in self.items.items()])
+        return sum([item.weight * quant for (item,quant) in self.items.items()])
 
     def isDone(self):
         return all([quant == 0 for quant in self.items.values()])
@@ -62,11 +62,44 @@ class Order(Inventory):
     def __cmp__(self, other):
         return cmp(self.totalWeight(), other.totalWeight())
 
+    def getEarliestDeliver(self, warehouses, drones):
+        earliest = float('inf')
+        # for it in sorted(self.items, key=lambda i: -i.weight):
+        for it in self.items:
+            for w in warehouses:
+                if w[it] > 0:
+                    ow_dist = distance(w.x,w.y, self.x,self.y)
+                    for d in drones:
+                        next = d.time + distance(d.x,d.y, w.x,w.y) + ow_dist
+                        if next < earliest:
+                            best_d    = d
+                            best_w    = w
+                            best_it   = it
+                            earliest = next
+        return (best_d, best_w, best_it, earliest)
+
 class SuperOrder:
     def __init__(self, x, y, orders):
-        self.x      = x
-        self.y      = y
+        items = {}
+        for o in orders:
+            for it in o.items:
+                items[it] = items.get(it, 0) + o[it]        
+        super(self.__class__, self).__init__(-1, x, y, items)
         self.orders = orders
+
+    def isDone(self):
+        return all([o.isDone() for o in self.orders])
+
+    def getEarliestDeliver(self, warehouses, drones):
+        earliest = float('inf')
+        for o in filter(lambda o: not o.isDone(), self.orders):
+            d, w, item, next = o.getEarliestDeliver(warehouses, drones)
+            if next < earliest:
+                best_d = d
+                best_w = w
+                best_it = it
+                earliest = next
+        return (best_d, best_w, best_it, earliest)
 
     def deliver(self, items):
         pass
