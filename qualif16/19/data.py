@@ -12,7 +12,7 @@ class ItemType:
         self.weight = weight
 
     def __str__(self):
-        return str(self.weight)
+        return "(" + str(self.index) + ",w="+ str(self.weight) + ")"
     def __repr__(self):
         return self.__str__()
 
@@ -40,18 +40,24 @@ class Warehouse(Inventory):
     def load(self, item, quant):
         assert(self[item] >= quant)
         self[item] -= quant
+        if self[item] == 0:
+            self.items.pop(item)
 
 class Order(Inventory):
-    def __init__(self, index, x, y, items, warehouses):
+    def __init__(self, index, x, y, items):
         super(self.__class__, self).__init__(index, x, y, items)
-        self.warehouses = warehouses[:]
-        self.warehouses.sort(key=lambda w:distance(self.x,self.y, w.x,w.y))
+        # self.warehouses = warehouses[:]
+        # self.warehouses.sort(key=lambda w:distance(self.x,self.y, w.x,w.y))
 
-    def deliver(self, item, quant):
+    def deliver(self, drone, item, quant):
         assert(self[item] >= quant)
+        drone.travel(self.x, self.y)
+        # drop items
         self[item] -= quant
         if self[item] == 0:
             self.items.pop(item)
+        drone.deliver(item, quant)
+        return [ActionD(drone, item, quant, self)]
 
     def totalWeight(self):
         return sum([item.weight * quant for (item,quant) in self.items.items()])
@@ -59,26 +65,24 @@ class Order(Inventory):
     def isDone(self):
         return all([quant == 0 for quant in self.items.values()])
 
-    def __cmp__(self, other):
-        return cmp(self.totalWeight(), other.totalWeight())
-
     def getEarliestDeliver(self, warehouses, drones):
         earliest = float('inf')
         # for it in sorted(self.items, key=lambda i: -i.weight):
         for it in self.items:
-            for w in warehouses:
-                if w[it] > 0:
-                    ow_dist = distance(w.x,w.y, self.x,self.y)
-                    for d in drones:
-                        next = d.time + distance(d.x,d.y, w.x,w.y) + ow_dist
-                        if next < earliest:
-                            best_d    = d
-                            best_w    = w
-                            best_it   = it
-                            earliest = next
+            if self.items[it] > 0:
+                for w in warehouses:
+                    if w[it] > 0:
+                        ow_dist = distance(w.x,w.y, self.x,self.y)
+                        for d in drones:
+                            next = d.time + distance(d.x,d.y, w.x,w.y) + ow_dist
+                            if next < earliest:
+                                best_d    = d
+                                best_w    = w
+                                best_it   = it
+                                earliest = next
         return (best_d, best_w, best_it, earliest)
 
-class SuperOrder:
+class SuperOrder(Inventory):
     def __init__(self, x, y, orders):
         items = {}
         for o in orders:
@@ -90,6 +94,9 @@ class SuperOrder:
     def isDone(self):
         return all([o.isDone() for o in self.orders])
 
+    def totalWeight(self):
+        return sum([o.totalWeight() for o in self.orders])
+
     def getEarliestDeliver(self, warehouses, drones):
         earliest = float('inf')
         for o in filter(lambda o: not o.isDone(), self.orders):
@@ -97,12 +104,25 @@ class SuperOrder:
             if next < earliest:
                 best_d = d
                 best_w = w
-                best_it = it
+                best_it = item
                 earliest = next
         return (best_d, best_w, best_it, earliest)
 
-    def deliver(self, items):
-        pass
+    def deliver(self, drone, item, quant):
+        assert(self[item] >= quant)
+
+        actions = []
+        for o in self.orders:
+            if quant <= 0:
+                break
+            if o[item] > 0:
+                qnt = min(o[item], quant)
+                self.items[item] -= qnt
+                if self.items[item] == 0:
+                    self.items.pop(item)
+                actions.extend(o.deliver(drone, item, qnt))
+                quant -= qnt
+        return actions
 
 class Drone:
     def __init__(self, index, x, y, w_max):
@@ -121,12 +141,9 @@ class Drone:
         warehouse.load(item, quant)
         return ActionL(self, item, quant, warehouse)
 
-    def deliver(self, order, item, quant):
-        self.travel(order.x, order.y)
+    def deliver(self, item, quant):
         self.time += 1
         self.weight -= item.weight * quant
-        order.deliver(item, quant)
-        return ActionD(self, item, quant, order)
 
     def travel(self, newx, newy):
         dist   = distance(self.x,self.y, newx, newy)
@@ -163,3 +180,30 @@ class ActionD(Action):
     def __str__(self):
         return ("%d D %d %d %d" % (self.drone.index, self.order.index,
                                    self.item_type.index, self.quant))
+
+class Simulator:
+    def __init__(self, orders, drones, warehouses, T):
+        self.T      = T
+        self.orders = [Order(o.index, o.x, o.y, {k:v for k,v in o.items.items()}) for o in orders]
+        self.drones = [Drone(d.index, d.x, d.y, d.w_max) for d in drones]
+        self.warehouses = [Warehouse(w.index, d.x, d.y, {k:v for k,v in w.items.items()}) for w in warehouses]
+        self.orders_time = {o: float('-inf') for o in self.orders}
+        self.finishing = []
+
+    def execute(self, action):
+        if isinstance(action, ActionD):
+            o = self.orders[action.order.index]
+            d = self.drones[action.drone.index]
+            o.deliver(d, action.item_type, action.quant)
+            self.orders_time[o] = max(self.orders_time[o], d.time)
+            if o.isDone():
+                self.finishing.append(self.orders_time[o])
+
+        elif isinstance(action, ActionL):
+            w = self.warehouses[action.warehouse.index]
+            d = self.drones[action.drone.index]
+            d.load(w, action.item_type, action.quant)
+
+    def score(self):
+        return int(sum([math.ceil(float(self.T-t)/self.T * 100) \
+                        for t in self.finishing]))

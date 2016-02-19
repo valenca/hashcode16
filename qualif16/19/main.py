@@ -3,7 +3,6 @@
 import sys
 from data import *
 from heapq import * 
-from math import ceil
 
 def read_input():
     read_ints = lambda: [int(x) for x in raw_input().split()]
@@ -33,7 +32,7 @@ def read_input():
         items = {}
         for t in read_ints():
             items[item_types[t]] = items.get(item_types[t], 0) + 1
-        orders.append(Order(i, x, y, items, warehouses))
+        orders.append(Order(i, x, y, items))
 
     ## drones
     drones = [Drone(i,warehouses[0].x, warehouses[0].y, WMAX) for i in range(D)]
@@ -51,6 +50,13 @@ def get_superorders(orders, range):
         so = max(neighbours, key = lambda n: len(neighbours[n]))
         neigh = neighbours.pop(so)
         for n in neigh:
+            for n2 in neighbours:
+                try:
+                    neighbours[n2].remove(n)
+                except: pass
+                try:
+                    neighbours[n2].remove(so)
+                except: pass
             neighbours.pop(n, None)
         res.append(SuperOrder(so.x, so.y, [so]+neigh))
     return res
@@ -67,44 +73,12 @@ def print_map(orders, superorders, warehouses, R, C, output):
     output.close()
 
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        outfile = open(sys.argv[1], "w")
-    else:
-        outfile = sys.stdout
-
-
-    item_types, warehouses, orders, drones, WMAX, T, R, C = read_input()
-    # print "item_types=",item_types
-    # print "warehouses=",warehouses
-    # print "orders=",orders
-    # print "drones=",drones
-
-    ## all available items
-    available = {it: sum([w[it] for w in warehouses]) for it in item_types}
-    orders.sort(key = lambda o: o.totalWeight())
-
-    ## get doable orders
-    todo = []
-    for o in orders:
-        if any([it.weight > WMAX for it in o.items]):
-            continue
-        if all([o[it] <= available[it] for it in o.items]):
-            for it in o.items:
-                available[it] -= o[it]
-            todo.append(o)
-
-    ## aggregate orders into superorders
-    # super_todo = get_superorders(orders[:], 3)
-    # print_map(orders, super_todo, warehouses, R, C, open("map.txt","w"))
-    # sys.exit(0)
-
-    finish    = {o: float('-inf') for o in todo}
-    actions   = []
-    # todo = super_todo       # comment to avoid superorders strategy
+def solve(orders):
+    actions = []
+    todo = [(o.totalWeight(), o) for o in orders]
     heapify(todo)
     while todo != []:
-        o             = heappop(todo)
+        weight_o, o   = heappop(todo)
         d, w, item, _ = o.getEarliestDeliver(warehouses, drones)
         quant         = min(o[item], w[item], d.w_max / item.weight)
 
@@ -124,19 +98,49 @@ if __name__ == '__main__':
             if last_w == d.weight:
                 break
 
+
         # deliver all items
         for it in to_carry:
-            actions.append(d.deliver(o, it, to_carry[it]))
+            actions.extend(o.deliver(d, it, to_carry[it]))
 
         if not o.isDone():
-            heappush(todo, o)
+            heappush(todo, (o.totalWeight(), o))
+    return actions
 
-        # get finish time of all orders
-        finish[o] = max(finish[o], d.time)
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        outfile = open(sys.argv[1], "w")
+    else:
+        outfile = sys.stdout
+
+    item_types, warehouses, orders, drones, WMAX, T, R, C = read_input()
+    S = Simulator(orders, drones, warehouses, T)
+
+    ## all available items
+    available = {it: sum([w[it] for w in warehouses]) for it in item_types}
+    orders.sort(key = lambda o: o.totalWeight())
+
+    ## get doable orders
+    doable = []
+    for o in orders:
+        if any([it.weight > WMAX for it in o.items]):
+            continue
+        if all([o[it] <= available[it] for it in o.items]):
+            for it in o.items:
+                available[it] -= o[it]
+            doable.append(o)
+
+    ## normal orders
+    # actions = solve(doable)
+
+    ## super orders
+    superorders = get_superorders(doable, 13)
+    actions = solve(superorders)
+    # print_map(orders, super_todo, warehouses, R, C, open("map.txt","w"))
     
     print >> outfile, len(actions)
     for a in actions:
         print >> outfile, a
+        S.execute(a)
 
-    score = int(sum([ ceil(float(T-t)/T * 100) for t in finish.values()]))
-    print "SCORE=", score
+    print "SCORE=", S.score()
